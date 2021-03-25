@@ -59,15 +59,17 @@ public class GrappleScript : MonoBehaviour
 
         //distance script is omitted because of sphere collider
 
-        if(pivot.name == "PivotPointTighten")
+        if(pivot.name.Contains("PivotPointTighten"))
         {
             spring = 80f;
+            damper = 7f;
+            massScale = 4.5f;
         }
-        else if(pivot.name == "PivotPointSwing")
+        else if(pivot.name.Contains("PivotPointSwing"))
         {
             spring = 10f;
-            damper = 70f;
-            massScale = 4.5f;
+            damper = 0.3f;
+            massScale = 3f;
         }
         //variables to adjust
         joint.spring = spring;

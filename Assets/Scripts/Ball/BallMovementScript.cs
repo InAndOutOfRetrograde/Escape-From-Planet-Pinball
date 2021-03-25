@@ -6,8 +6,8 @@ using UnityEngine.SceneManagement;
 public class BallMovementScript : MonoBehaviour
 {
     //GENERIC VARS//
-    Vector3 v3ForceUp = new Vector3(0,0,1);
-    Vector3 v3ForceRight = new Vector3(1,0,0);
+    Vector3 v3ForceUp = new Vector3(0, 0, 1);
+    Vector3 v3ForceRight = new Vector3(1, 0, 0);
     float XandZMagnitude;
     float YMagnitude;
     Vector3 velocityToBe;
@@ -23,6 +23,14 @@ public class BallMovementScript : MonoBehaviour
     float currentDeceleration = 0f;
     public float acceleration = 20f;
 
+    //BUTT SLAM VARIABLES//
+    bool canSlam = true;
+    private float buttSlamTimer = 0;
+    private float buttSlamAirTime = 0;
+    //a number for changing how long the player is in the air based on time
+    public float distanceWeight = 3;
+    public float meteorStateTimer = 1.5f;
+    
     //TIERED SPEED//
     //Change acceleration, top speed, numerical tier here
     int newSpeedMax = 0;
@@ -35,16 +43,29 @@ public class BallMovementScript : MonoBehaviour
     public bool movementAction = true;
 
     public bool grounded = true;
-    public Vector3 slamSpeed = new Vector3(0,-100,0);
+    public Vector3 slamSpeed = new Vector3(0, -100, 0);
 
     //PREDICTION LINE//
     public Vector3 predictBallLoc;
+    [SerializeField]
+    private Transform pos;
 
-    public Rigidbody rb;
+    private Rigidbody rb;
+
+    //SLOPE DEBUGGING TOOLS//
+    Transform center;
+    Vector3 slopeForce;
+    public float slopeStrength = 100f;
+
+    public bool WorldUp = true;
+    public bool LocalUp = true;
+    public bool CrossVector = true;
+    public bool SlopeVector = true;
 
     void Start()
     {
         rb = gameObject.GetComponent<Rigidbody>();
+        center = gameObject.transform.GetChild(3).transform;//for slope
         movementCooldown = cooldownVar;
     }
 
@@ -78,76 +99,101 @@ public class BallMovementScript : MonoBehaviour
         //controls
         if (Input.GetKey("up") || Input.GetKey(KeyCode.W))
         {
-            /*if (rb.velocity.z < 0)
-            {
-                rb.velocity += Vector3.Scale(v3ForceUp, new Vector3(1, 1, 2));
-            }
-            else
-            {*/
             direction += v3ForceUp;
-            //}
+
             currentDeceleration = 0f;
             velocityToBe.z = rb.velocity.z;
-            
         }
         if (Input.GetKey("down") || Input.GetKey(KeyCode.S))
         {
-            /*if(rb.velocity.z > 0)
-            {
-                rb.velocity -= Vector3.Scale(v3ForceUp, new Vector3(1, 1, 2));
-            }
-            else
-            {*/
             direction -= v3ForceUp;
-            //}
+
             currentDeceleration = 0f;
             velocityToBe.z = rb.velocity.z;
         }
         if (Input.GetKey("left") || Input.GetKey(KeyCode.A))
         {
-            /*if (rb.velocity.x < 0)
-            {
-                rb.velocity -= Vector3.Scale(v3ForceRight, new Vector3(2, 1, 1));
-            }
-            else
-            {*/
             direction -= v3ForceRight;
-            //}
+
             currentDeceleration = 0f;
             velocityToBe.x = rb.velocity.x;
         }
         if (Input.GetKey("right") || Input.GetKey(KeyCode.D))
         {
-            /*if(rb.velocity.x > 0)
-            {
-                rb.velocity += Vector3.Scale(v3ForceRight, new Vector3(2, 1, 1));
-            }
-            else
-            {*/
             direction += v3ForceRight;
-            //}
+
             currentDeceleration = 0f;
             velocityToBe.x = rb.velocity.x;
         }
+
         //butt slam.
-        if (Input.GetKey(KeyCode.LeftControl))
+        if (Input.GetKeyDown(KeyCode.LeftControl) && canSlam)
         {
-            //set unable to be pressed again until grounded has been true for 3 seconds.
-            velocityToBe = slamSpeed;
-            Debug.Log("holding left control");
+            canSlam = false;
+            //read distance to ground.
+            RaycastHit hit;
+            Ray ray = new Ray(transform.position, -Vector3.up);
+            Physics.Raycast(ray, out hit);
+            //create a time
+            buttSlamAirTime = hit.distance * distanceWeight;
+            //timer will be called at the bottom of this method
+            
+            //go straight down and hit ground
+            //start timer to change when grounded has been true for 3 seconds.
         }
-        if(Input.GetKey(KeyCode.Escape))
+
+        //pause
+        if (Input.GetKey(KeyCode.Escape))
         {
             SceneManager.LoadScene(0);
         }
+        //slow down
         if (!Input.anyKey)
         {
-            RaycastHit hit;
-            Physics.Raycast(transform.position, -Vector3.up, out hit, 0.1f);
-            Vector3 normal = hit.normal;
+            currentDeceleration += constantDeceleration;
+        }
 
-            float gradient = GradientMaker(normal) * 3;
-            currentDeceleration += constantDeceleration; //*gradient
+        //slope
+        if (grounded)
+        {
+            slopeForce = SlopeMovement();
+            if (slopeForce.magnitude > .05f)//if there's a slope
+            {
+                slopeForce *= slopeStrength;//make the force to go down stronger as long as youre on it.
+                slopeStrength += slopeStrength;
+                if (slopeStrength <= .07f)//set a top force
+                {
+                    slopeStrength = .07f;
+                }
+            }
+            //reset if on level ground
+            else if (slopeForce.magnitude < .05)
+            {
+                slopeStrength = 0.02f;
+            }
+            //use this if you want to give the player no control on a slope
+            //direction = slopeForce + direction;
+
+        }
+
+        //butt slam based on distance
+        if (buttSlamTimer < buttSlamAirTime && canSlam == false)
+        {
+            buttSlamTimer += Time.deltaTime;
+            direction = new Vector3(0, 0, 0);
+            transform.position += Vector3.up * 0.4f;
+            //if the player has gotten enough height, catch fire
+            if(buttSlamTimer >= meteorStateTimer)
+            {
+                //turn on meteor state.
+            }
+        }
+        else if(buttSlamTimer >= buttSlamAirTime && canSlam == false)
+        {
+            velocityToBe = slamSpeed;
+            buttSlamTimer = 0;
+            buttSlamAirTime = 0;
+            canSlam = true;
         }
 
         rb.velocity = velocityToBe;
@@ -169,17 +215,44 @@ public class BallMovementScript : MonoBehaviour
         return grounded;
     }
 
-    //BROKEN
-    float GradientMaker(Vector3 norm)
+    Vector3 SlopeMovement()
     {
-        float angle = Vector3.Angle(norm, Vector3.up);
-        angle = Mathf.Rad2Deg*angle;
-        if (angle < 0)
+        //get normal
+        RaycastHit hit;
+        Physics.Raycast(center.position, -Vector3.up, out hit, 3f);
+        Debug.DrawRay(center.position, -Vector3.up, Color.green);
+        Vector3 norm = hit.normal;
+
+        Vector3 cross = Vector3.Cross(norm, Vector3.up); // get angle
+        Vector3 slope = Vector3.Cross(norm, cross); //get the slope using the new plane
+
+        //debugging tools
+        if (WorldUp)
+            Debug.DrawRay(center.position, Vector3.up * 5, Color.green);
+        if (LocalUp)
+            Debug.DrawRay(center.position, norm * 5, Color.magenta);
+        if (CrossVector)
+            Debug.DrawRay(center.position, cross * 5, Color.blue);
+        if (SlopeVector)
+            Debug.DrawRay(center.position, slope * 5, Color.red);
+
+        //slope is now made, but we need to see which direction is steeper.
+
+        //apply that force and scale for the slope every frame.
+        return slope;
+    }
+
+    /*
+    //BROKEN
+    Quaternion GradientMaker(Vector3 norm)
+    {
+        Quaternion rotation = Quaternion.LookRotation(norm - new Vector3(0,0,-90), Vector3.up);
+        if (-10 < angle && angle < 10)
         {
             angle = Mathf.Abs(angle);
         }
-        return angle;
-    }
+        return rotation;
+    } */
 
     void SpeedCap(float maxSpeedXAndZ)
     {
@@ -261,8 +334,10 @@ public class BallMovementScript : MonoBehaviour
     void FixedUpdate()
     {
         isGrounded();
-        //if(grounded == false)
-        //{
+        if (grounded == true)
+        {
+            SlopeMovement();
+        }    
         LineForPrediction();
         //}
         //timer that is used to see when the player is free to move again/when deacceleration should slow them
