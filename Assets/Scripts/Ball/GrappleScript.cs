@@ -26,20 +26,23 @@ public class GrappleScript : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKey(KeyCode.Space))
         {
-            //hasnt attached, 
+            //hasnt attached
             if (!grappled && range.GetClosest() != null)
             {
                 StartGrapple();
                 grappled = true;
             }
-            //has attached,
-            else if(grappled)
+        }
+        else if (Input.GetKeyUp(KeyCode.Space))
+        {
+            //has attached
+            if (grappled)
             {
                 StopGrapple();
                 grappled = false;
-            }
+            }           
         }
     }
 
@@ -61,13 +64,13 @@ public class GrappleScript : MonoBehaviour
 
         if(pivot.name.Contains("PivotPointTighten"))
         {
-            spring = 80f;
+            spring = 90f;
             damper = 7f;
             massScale = 4.5f;
         }
         else if(pivot.name.Contains("PivotPointSwing"))
         {
-            spring = 10f;
+            spring = 18f;
             damper = 0.3f;
             massScale = 3f;
         }

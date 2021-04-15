@@ -17,6 +17,8 @@ public class BallMovementScript : MonoBehaviour
     //Change decrease in speed, top speed vert and hori here.
     public float topSpeedReduction = .09f;
     public float topSpeedXAndZ = 100f;
+    public float slopeIncreaseModifier = 0f;
+    float slopeSpeedCap = 0f;
     public float maxSpeedY = 90f; //find how to use later
 
     public float constantDeceleration = 0.1f;
@@ -28,13 +30,12 @@ public class BallMovementScript : MonoBehaviour
     private float buttSlamTimer = 0;
     private float buttSlamAirTime = 0;
     //a number for changing how long the player is in the air based on time
-    public float distanceWeight = 3;
-    public float meteorStateTimer = 1.5f;
-    
-    //TIERED SPEED//
-    //Change acceleration, top speed, numerical tier here
-    int newSpeedMax = 0;
-    int newSpeedTier = 0;
+    public float distanceWeight = 1;
+
+    //METEOR MODE//
+    ParticleSystem bloom;
+    public float meteorStateMin = .6f;
+    bool meteorState = false;
 
     //TIMER VARS//
     //Vars used to limit movement things for a period of time.
@@ -43,7 +44,7 @@ public class BallMovementScript : MonoBehaviour
     public bool movementAction = true;
 
     public bool grounded = true;
-    public Vector3 slamSpeed = new Vector3(0, -100, 0);
+    public Vector3 slamSpeed = new Vector3(0, -200, 0);
 
     //PREDICTION LINE//
     public Vector3 predictBallLoc;
@@ -66,43 +67,53 @@ public class BallMovementScript : MonoBehaviour
     {
         rb = gameObject.GetComponent<Rigidbody>();
         center = gameObject.transform.GetChild(3).transform;//for slope
-        movementCooldown = cooldownVar;
+
+        bloom = gameObject.transform.GetChild(1).GetComponentInChildren<ParticleSystem>();//for meteor mode
+        bloom.Stop();
     }
 
     void Deacceleration()
     {
         velocityToBe = rb.velocity;
-        if (velocityToBe.x > 0f)
+        //if going in a direction and there is no slope force in that direction, slow it down.
+        if (velocityToBe.x > 0f && !(slopeForce.x > 0f))
         {
             velocityToBe.x -= currentDeceleration;
             if (velocityToBe.x < 0f) velocityToBe.x = 0f;
         }
-        if (velocityToBe.x < 0f)
+        if (velocityToBe.x < 0f && !(slopeForce.x < 0f))
         {
             velocityToBe.x += currentDeceleration;
             if (velocityToBe.x > 0f) velocityToBe.x = 0f;
         }
-        if (velocityToBe.z > 0f)
+        if (velocityToBe.z > 0f && !(slopeForce.y > 0f))
         {
             velocityToBe.z -= currentDeceleration;
             if (velocityToBe.z < 0f) velocityToBe.z = 0f;
         }
-        if (velocityToBe.z < 0f)
+        if (velocityToBe.z < 0f && !(slopeForce.y < 0f))
         {
             velocityToBe.z += currentDeceleration;
             if (velocityToBe.z > 0f) velocityToBe.z = 0f;
         }
     }
 
-    void MovementInput()
+    //moves based on input. 
+    //as is, player will still go left right up and down based on WASD, but we should find a way to do this with slope.
+    //maybe y force down?
+    void DirectionalInput()
     {
-        //controls
         if (Input.GetKey("up") || Input.GetKey(KeyCode.W))
         {
             direction += v3ForceUp;
 
             currentDeceleration = 0f;
+
             velocityToBe.z = rb.velocity.z;
+            if (slopeForce.z > 0)
+            {
+                velocityToBe.z += slopeForce.z;
+            }
         }
         if (Input.GetKey("down") || Input.GetKey(KeyCode.S))
         {
@@ -110,6 +121,10 @@ public class BallMovementScript : MonoBehaviour
 
             currentDeceleration = 0f;
             velocityToBe.z = rb.velocity.z;
+            if (slopeForce.z < 0)
+            {
+                velocityToBe.z -= slopeForce.z;
+            }
         }
         if (Input.GetKey("left") || Input.GetKey(KeyCode.A))
         {
@@ -117,6 +132,10 @@ public class BallMovementScript : MonoBehaviour
 
             currentDeceleration = 0f;
             velocityToBe.x = rb.velocity.x;
+            if (slopeForce.x > 0)
+            {
+                velocityToBe.x -= slopeForce.x;
+            }
         }
         if (Input.GetKey("right") || Input.GetKey(KeyCode.D))
         {
@@ -124,7 +143,26 @@ public class BallMovementScript : MonoBehaviour
 
             currentDeceleration = 0f;
             velocityToBe.x = rb.velocity.x;
+            if (slopeForce.x < 0)
+            {
+                velocityToBe.x += slopeForce.x;
+            }
         }
+
+        //adjusting direction based on slope
+        Vector3 floorNorm = Vector3.up;
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, 0.75f))
+        {
+            floorNorm = hit.normal;
+            direction = Vector3.ProjectOnPlane(direction, floorNorm);
+        }
+    }
+    void MovementInput()
+    {
+        //controls
+        DirectionalInput();
 
         //butt slam.
         if (Input.GetKeyDown(KeyCode.LeftControl) && canSlam)
@@ -136,10 +174,31 @@ public class BallMovementScript : MonoBehaviour
             Physics.Raycast(ray, out hit);
             //create a time
             buttSlamAirTime = hit.distance * distanceWeight;
-            //timer will be called at the bottom of this method
-            
-            //go straight down and hit ground
-            //start timer to change when grounded has been true for 3 seconds.
+            if(buttSlamAirTime > 0.7f)
+            {
+                buttSlamAirTime = 0.7f;
+            }
+        }
+
+        //butt slam based on distance
+        if (buttSlamTimer < buttSlamAirTime && canSlam == false)
+        {
+            buttSlamTimer += Time.deltaTime;
+            velocityToBe = new Vector3(0, 0, 0);
+            transform.position += Vector3.up * 0.1f;
+            //if the player has gotten enough height, catch fire
+            if (buttSlamTimer >= meteorStateMin)
+            {
+                meteorState = true;
+            }
+        }
+        else if (buttSlamTimer >= buttSlamAirTime && canSlam == false)
+        {
+            //slam down and reset
+            velocityToBe = slamSpeed;
+            buttSlamTimer = 0;
+            buttSlamAirTime = 0;
+            canSlam = true;
         }
 
         //pause
@@ -152,49 +211,7 @@ public class BallMovementScript : MonoBehaviour
         {
             currentDeceleration += constantDeceleration;
         }
-
-        //slope
-        if (grounded)
-        {
-            slopeForce = SlopeMovement();
-            if (slopeForce.magnitude > .05f)//if there's a slope
-            {
-                slopeForce *= slopeStrength;//make the force to go down stronger as long as youre on it.
-                slopeStrength += slopeStrength;
-                if (slopeStrength <= .07f)//set a top force
-                {
-                    slopeStrength = .07f;
-                }
-            }
-            //reset if on level ground
-            else if (slopeForce.magnitude < .05)
-            {
-                slopeStrength = 0.02f;
-            }
-            //use this if you want to give the player no control on a slope
-            //direction = slopeForce + direction;
-
-        }
-
-        //butt slam based on distance
-        if (buttSlamTimer < buttSlamAirTime && canSlam == false)
-        {
-            buttSlamTimer += Time.deltaTime;
-            direction = new Vector3(0, 0, 0);
-            transform.position += Vector3.up * 0.4f;
-            //if the player has gotten enough height, catch fire
-            if(buttSlamTimer >= meteorStateTimer)
-            {
-                //turn on meteor state.
-            }
-        }
-        else if(buttSlamTimer >= buttSlamAirTime && canSlam == false)
-        {
-            velocityToBe = slamSpeed;
-            buttSlamTimer = 0;
-            buttSlamAirTime = 0;
-            canSlam = true;
-        }
+        
 
         rb.velocity = velocityToBe;
         rb.velocity += direction.normalized * acceleration;
@@ -242,37 +259,24 @@ public class BallMovementScript : MonoBehaviour
         return slope;
     }
 
-    /*
-    //BROKEN
-    Quaternion GradientMaker(Vector3 norm)
-    {
-        Quaternion rotation = Quaternion.LookRotation(norm - new Vector3(0,0,-90), Vector3.up);
-        if (-10 < angle && angle < 10)
-        {
-            angle = Mathf.Abs(angle);
-        }
-        return rotation;
-    } */
-
     void SpeedCap(float maxSpeedXAndZ)
     {
-        //what if i made it so it slowed to top speed instead of immediately slowing to top speed?
-        //speed cap
+        //slows the ball to top speed
         Vector3 adjustedVelocity = rb.velocity;
         XandZMagnitude = new Vector2(rb.velocity.x, rb.velocity.z).magnitude;
         if (XandZMagnitude > maxSpeedXAndZ)
         {
             float diff = XandZMagnitude - maxSpeedXAndZ;
             diff *= topSpeedReduction;
-            Vector2 xAndZNormalized = new Vector2(rb.velocity.x, rb.velocity.z).normalized * (maxSpeedXAndZ + diff);
+            Vector2 xAndZNormalized = new Vector2(rb.velocity.x, rb.velocity.z).normalized * (maxSpeedXAndZ + diff); //add ramp speed here);
             adjustedVelocity.x = xAndZNormalized.x;
             adjustedVelocity.z = xAndZNormalized.y;
         }
-        if (rb.velocity.y > Mathf.Abs(maxSpeedY)) Debug.Log("MAXED OUT SPEED");
         adjustedVelocity.y = Mathf.Clamp(adjustedVelocity.y, -maxSpeedY, maxSpeedY);
 
         rb.velocity = adjustedVelocity;
     }
+    //USELESS RN
     void Timer()
     {
         if (movementCooldown > 0 && movementAction == false)
@@ -295,119 +299,72 @@ public class BallMovementScript : MonoBehaviour
         predictBallLoc = hit.point;
     }
 
-    public int GetTier(int tierOfSpeed)
+    //a method to turn on all the properties that come with meteor mode
+    void MeteorMode(bool state)
     {
-        //i need a new top speed
-        //select between 4 tiers of speed (respresented by ints 1-4)
-        //depending on tier, it returns a new top speed.
-        newSpeedMax = 0;
-        if (tierOfSpeed == 1)
+        if(state)
         {
-            newSpeedMax = 30;
-            newSpeedTier = 1;
-            //create a method that handles all of this and puts a timer on it if necessary.
+            Debug.Log("on");
+            bloom.Play();
         }
-        if (tierOfSpeed == 2)
+        else
         {
-            newSpeedMax = 60;
-            newSpeedTier = 2;
+            Debug.Log("off");
+            bloom.Stop();
         }
-        if (tierOfSpeed == 3)
-        {
-            newSpeedMax = 90;
-            newSpeedTier = 3;
-        }
-        if (tierOfSpeed == 4)
-        {
-            newSpeedMax = 120;
-            newSpeedTier = 4;
-        }
-        return newSpeedMax;
-    }
-
-    public void MovementChange()
-    {
-        movementAction = false;
-        movementCooldown = cooldownVar;
     }
 
     void FixedUpdate()
     {
         isGrounded();
-        if (grounded == true)
+        //slope force
+        if (grounded)
         {
-            SlopeMovement();
-        }    
-        LineForPrediction();
-        //}
+            slopeForce = SlopeMovement();
+            //add to top speed by slopemovement scale
+            slopeSpeedCap = slopeForce.magnitude * 3;
+
+            meteorState = false;
+        }
+        else
+        {
+            slopeForce = new Vector3(0,0,0);
+        }
         //timer that is used to see when the player is free to move again/when deacceleration should slow them
         Timer();
         //slows the player every frame that a button is not being pressed/moving in another direction
         Deacceleration();
+        LineForPrediction();
         //zeros out the direction for this frame so that a new one can be added
         direction = new Vector3(0, 0, 0);
-        //moves the player based on input if they are allowed to move
-        //if (movementAction == true)
-        //{
-            MovementInput();
-        //}
-        //caps speed to current numbers. Should pass through a new number any time the player changes tiered speed.
-        //if(movementAction == false)
-        //{
-            SpeedCap(topSpeedXAndZ);
-        //}
         
-        //timer that lowers speed by tier
-
+        MovementInput();
+        
+        //caps speed to current numbers. Should pass through a new number any time the player changes tiered speed.
+        SpeedCap(topSpeedXAndZ + slopeSpeedCap);
+        MeteorMode(meteorState);
+        Debug.Log(meteorState);
     }
-
-    //code for changing stuff on the player based on what it has collided into recently.//
 
     void OnCollisionEnter(Collision collide)
     {
-        //breaking?
-        //
-        //{
-        //MovementChange();
-        //tier changer
-        /*foreach (MonoBehaviour script in collide.transform.GetComponents<MonoBehaviour>())
-        {
-            MonoBehaviour Script = gameObject.GetComponent(typeof(script)) as MonoBehaviour;
-            if (Script is Machine)
-            {
-                GetTier(collide.transform.GetComponent<>().tierOfSpeedGive);
-            }
-        }*/
         //Arcade boosters
-        if (collide.transform.tag == "Mover")
+
+        if(collide.transform.tag == "Boost")
         {
-            if(collide.transform.GetComponent<Redirector>() != null)
-            {
-                GetTier(collide.transform.GetComponent<Redirector>().tierOfSpeedGive);
-            }
-            else if (collide.transform.GetComponent<FlipperScript>() != null)
-            {
-                GetTier(collide.transform.GetComponent<FlipperScript>().tierOfSpeedGive);
-            }
-            else if (collide.transform.GetComponent<Trampoline>() != null)
-            {
-                GetTier(collide.transform.GetComponent<Trampoline>().tierOfSpeedGive);
-            }
+
+            //get the forward vector, add force that way
+            Vector3 boostDir = direction.normalized * 100;
+
+            velocityToBe += boostDir;
         }
-        //Code for walls so you can't enter eareas until you have the proper tier
-        if(collide.transform.tag == "Restrictor")
+
+        if(collide.transform.tag == "Break" && meteorState)
         {
-            //run code to make it so you can't move through certain things without having achieved a certain tier. 
-            //glow red, give feedback.
+            Destroy(collide.gameObject);
         }
-        if(collide.transform.tag == "SpeedArch")
-        {
-            if(collide.transform.GetComponent<SpeedArch>() != null)
-            {
-                GetTier(collide.transform.GetComponent<SpeedArch>().tierOfSpeedGive);
-            }
-        }
-        //}
+
+        //if player goes over speed pads, then change acceleration for a limited amount of time.
 
     }
 }

@@ -5,9 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Mover
-  - SpeedArch
   - Restrictor
   - Grapplable
+  - Boost
   layers:
   - Default
   - TransparentFX
