@@ -33,7 +33,7 @@ public class BallMovementScript : MonoBehaviour
     public float distanceWeight = 1;
 
     //METEOR MODE//
-    ParticleSystem bloom;
+    public ParticleSystem bloom;
     public float meteorStateMin = .6f;
     bool meteorState = false;
 
@@ -68,7 +68,8 @@ public class BallMovementScript : MonoBehaviour
         rb = gameObject.GetComponent<Rigidbody>();
         center = gameObject.transform.GetChild(3).transform;//for slope
 
-        bloom = gameObject.transform.GetChild(1).GetComponentInChildren<ParticleSystem>();//for meteor mode
+        Instantiate(bloom, transform.position, transform.rotation);
+        bloom.transform.parent = gameObject.transform;
         bloom.Stop();
     }
 
@@ -201,6 +202,21 @@ public class BallMovementScript : MonoBehaviour
             canSlam = true;
         }
 
+        //fast
+        if(Input.GetKey(KeyCode.LeftShift))
+        {
+            acceleration = 1.5f;
+        }
+        else
+        {
+            acceleration = 1.1f;
+        }
+        //jump
+        if(Input.GetKeyDown(KeyCode.Space) && grounded == true)
+        {
+            velocityToBe.y += 15f;
+        }
+
         //pause
         if (Input.GetKey(KeyCode.Escape))
         {
@@ -212,7 +228,6 @@ public class BallMovementScript : MonoBehaviour
             currentDeceleration += constantDeceleration;
         }
         
-
         rb.velocity = velocityToBe;
         rb.velocity += direction.normalized * acceleration;
     }
@@ -302,7 +317,8 @@ public class BallMovementScript : MonoBehaviour
     //a method to turn on all the properties that come with meteor mode
     void MeteorMode(bool state)
     {
-        if(state)
+        
+        if (state)
         {
             Debug.Log("on");
             bloom.Play();
