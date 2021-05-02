@@ -26,7 +26,7 @@ public class GrappleScript : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKey(KeyCode.LeftAlt))
+        if (Input.GetKeyDown(KeyCode.E))
         {
             //hasnt attached
             if (!grappled && range.GetClosest() != null)
@@ -35,7 +35,7 @@ public class GrappleScript : MonoBehaviour
                 grappled = true;
             }
         }
-        else if (Input.GetKeyUp(KeyCode.LeftAlt))
+        else if (Input.GetKeyUp(KeyCode.E))
         {
             //has attached
             if (grappled)

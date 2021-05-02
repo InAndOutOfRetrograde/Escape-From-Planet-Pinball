@@ -354,12 +354,14 @@ MonoBehaviour:
   topSpeedReduction: 0.95
   topSpeedXAndZ: 15
   slopeIncreaseModifier: 5
-  maxSpeedY: 60
+  maxSpeedY: 45
   constantDeceleration: 0.03
   acceleration: 1.2
-  distanceWeight: 0.3
-  bloom: {fileID: 1084561448147968204, guid: 3fc4ecd3496805a448fec88263dded07, type: 3}
+  distanceWeight: 0.05
+  bloom: {fileID: 8697586945001336019, guid: 3fc4ecd3496805a448fec88263dded07, type: 3}
+  explosion: {fileID: 5173922069075971734, guid: b5084f97cfb772a42825d5395442c718, type: 3}
   meteorStateMin: 0.6
+  timerReset: 3
   cooldownVar: 1
   movementCooldown: 1
   movementAction: 1

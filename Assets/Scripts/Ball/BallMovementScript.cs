@@ -33,18 +33,21 @@ public class BallMovementScript : MonoBehaviour
     public float distanceWeight = 1;
 
     //METEOR MODE//
-    public ParticleSystem bloom;
+    public GameObject bloom;
+    public GameObject explosion;
+    private ParticleSystem bloomObj;
     public float meteorStateMin = .6f;
     bool meteorState = false;
 
     //TIMER VARS//
     //Vars used to limit movement things for a period of time.
-    public float cooldownVar = 1f;
+    public float timerReset = 3f;
+    public float cooldownVar;
     public float movementCooldown;
     public bool movementAction = true;
 
     public bool grounded = true;
-    public Vector3 slamSpeed = new Vector3(0, -200, 0);
+    public Vector3 slamSpeed = new Vector3(0, -400, 0);
 
     //PREDICTION LINE//
     public Vector3 predictBallLoc;
@@ -68,9 +71,14 @@ public class BallMovementScript : MonoBehaviour
         rb = gameObject.GetComponent<Rigidbody>();
         center = gameObject.transform.GetChild(3).transform;//for slope
 
-        Instantiate(bloom, transform.position, transform.rotation);
-        bloom.transform.parent = gameObject.transform;
-        bloom.Stop();
+        movementCooldown = timerReset;
+        cooldownVar = timerReset;
+        
+        var realBloom = Instantiate(bloom, transform.position, transform.rotation);
+        bloomObj = realBloom.GetComponent<ParticleSystem>();
+        bloomObj.Stop();
+        realBloom.transform.SetParent(gameObject.transform);
+        
     }
 
     void Deacceleration()
@@ -166,11 +174,13 @@ public class BallMovementScript : MonoBehaviour
         DirectionalInput();
 
         //butt slam.
-        if (Input.GetKeyDown(KeyCode.LeftControl) && canSlam)
+        if (Input.GetKey(KeyCode.LeftControl) && canSlam)
         {
             canSlam = false;
+            //slam down and reset
+            velocityToBe = slamSpeed;
             //read distance to ground.
-            RaycastHit hit;
+            /*RaycastHit hit;
             Ray ray = new Ray(transform.position, -Vector3.up);
             Physics.Raycast(ray, out hit);
             //create a time
@@ -178,11 +188,11 @@ public class BallMovementScript : MonoBehaviour
             if(buttSlamAirTime > 0.7f)
             {
                 buttSlamAirTime = 0.7f;
-            }
+            }*/
         }
 
         //butt slam based on distance
-        if (buttSlamTimer < buttSlamAirTime && canSlam == false)
+        /*if (buttSlamTimer < buttSlamAirTime && canSlam == false)
         {
             buttSlamTimer += Time.deltaTime;
             velocityToBe = new Vector3(0, 0, 0);
@@ -200,21 +210,21 @@ public class BallMovementScript : MonoBehaviour
             buttSlamTimer = 0;
             buttSlamAirTime = 0;
             canSlam = true;
-        }
+        }*/
 
         //fast
-        if(Input.GetKey(KeyCode.LeftShift))
+        if(meteorState == true)
         {
-            acceleration = 1.5f;
+            acceleration = 1.35f;
         }
         else
         {
-            acceleration = 1.1f;
+            acceleration = .85f;
         }
         //jump
-        if(Input.GetKeyDown(KeyCode.Space) && grounded == true)
+        if(Input.GetKey(KeyCode.Space) && grounded == true)
         {
-            velocityToBe.y += 15f;
+            velocityToBe.y += 20f;
         }
 
         //pause
@@ -291,17 +301,17 @@ public class BallMovementScript : MonoBehaviour
 
         rb.velocity = adjustedVelocity;
     }
-    //USELESS RN
+    //STILL USELESS
     void Timer()
     {
-        if (movementCooldown > 0 && movementAction == false)
+        if (meteorState == true)
         {
             movementCooldown -= Time.deltaTime;
         }
         else
         {
             movementCooldown = cooldownVar;
-            movementAction = true;
+            meteorState = false;
         }
     }
 
@@ -315,18 +325,31 @@ public class BallMovementScript : MonoBehaviour
     }
 
     //a method to turn on all the properties that come with meteor mode
-    void MeteorMode(bool state)
+    void MeteorMode()
     {
-        
-        if (state)
+        //at above top speed
+        if(rb.velocity.magnitude > topSpeedXAndZ * 2.5)//AND if youve made contact with a booster object
         {
-            Debug.Log("on");
-            bloom.Play();
+            meteorState = true;
+            movementCooldown = timerReset;//reset
         }
         else
         {
-            Debug.Log("off");
-            bloom.Stop();
+            if(movementCooldown > 0)
+            {
+                movementCooldown -= Time.deltaTime;//timer is acting weird, but it works?
+            }
+            
+            if (movementCooldown <= 0)//timer done?
+            {
+                meteorState = false;
+            }
+        }
+        if (meteorState){
+            //timer starts for meteor state to play until timer runs out 
+        }
+        else
+        {bloomObj.Play();
         }
     }
 
@@ -339,15 +362,12 @@ public class BallMovementScript : MonoBehaviour
             slopeForce = SlopeMovement();
             //add to top speed by slopemovement scale
             slopeSpeedCap = slopeForce.magnitude * 3;
-
-            meteorState = false;
+            canSlam = true;
         }
         else
         {
             slopeForce = new Vector3(0,0,0);
         }
-        //timer that is used to see when the player is free to move again/when deacceleration should slow them
-        Timer();
         //slows the player every frame that a button is not being pressed/moving in another direction
         Deacceleration();
         LineForPrediction();
@@ -358,14 +378,12 @@ public class BallMovementScript : MonoBehaviour
         
         //caps speed to current numbers. Should pass through a new number any time the player changes tiered speed.
         SpeedCap(topSpeedXAndZ + slopeSpeedCap);
-        MeteorMode(meteorState);
-        Debug.Log(meteorState);
+        MeteorMode();
     }
-
     void OnCollisionEnter(Collision collide)
     {
         //Arcade boosters
-
+        /*
         if(collide.transform.tag == "Boost")
         {
 
@@ -373,11 +391,16 @@ public class BallMovementScript : MonoBehaviour
             Vector3 boostDir = direction.normalized * 100;
 
             velocityToBe += boostDir;
-        }
+        }*/
 
-        if(collide.transform.tag == "Break" && meteorState)
+        if (collide.transform.tag == "Break" && meteorState == true)
         {
             Destroy(collide.gameObject);
+            Instantiate(explosion, collide.gameObject.transform.position+new Vector3(0,5,0), Quaternion.identity);
+        }
+        if (collide.transform.tag == "End")
+        {
+            SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
         }
 
         //if player goes over speed pads, then change acceleration for a limited amount of time.

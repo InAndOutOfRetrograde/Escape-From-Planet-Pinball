@@ -24,7 +24,7 @@ public class FlipperScript : Machine
         spring.spring = hitStrength;
         spring.damper = flipperDamper;
 
-        if (Input.GetKey(KeyCode.Space))
+        if (Input.GetKey(KeyCode.E))
         {
             spring.targetPosition = pressedPosition;
         }

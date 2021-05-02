@@ -8,6 +8,8 @@ TagManager:
   - Restrictor
   - Grapplable
   - Boost
+  - Break
+  - End
   layers:
   - Default
   - TransparentFX
