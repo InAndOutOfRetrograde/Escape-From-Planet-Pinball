@@ -29,13 +29,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2161937066283279400}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.55, y: 8.521, z: 14.31}
-  m_LocalScale: {x: 3, y: 1, z: 1}
+  m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: 0.5}
+  m_LocalPosition: {x: -5.55, y: 8.5, z: 14.26}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.5}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 90}
 --- !u!33 &2161937066283279405
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -43,7 +43,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2161937066283279400}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 575119829107983959, guid: 2b15d50f8a4a1a04db48622b9679c313, type: 3}
 --- !u!23 &2161937066283279402
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -63,7 +63,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a3cd22eceea5e8548b10cdb5d9b49a25, type: 2}
+  - {fileID: 2100000, guid: 2b0bd5cc4861cbd4c9e1872cd3c83310, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -122,10 +122,11 @@ HingeJoint:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2161937066283279400}
   m_ConnectedBody: {fileID: 0}
+  m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0.5, y: 0, z: 0}
-  m_Axis: {x: 0, y: 1, z: 0}
+  m_Axis: {x: 0, y: 0, z: 1}
   m_AutoConfigureConnectedAnchor: 1
-  m_ConnectedAnchor: {x: -4.05, y: 8.521, z: 14.31}
+  m_ConnectedAnchor: {x: 53.386024, y: 2.2676759, z: -4.9503555}
   m_UseSpring: 1
   m_Spring:
     spring: 5
@@ -161,7 +162,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7ef7a73706a58946b3b14812f1e9b9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tierOfSpeed: 1
+  tierOfSpeedGive: 0
   restPosition: 0
   pressedPosition: 45
   hitStrength: 10000

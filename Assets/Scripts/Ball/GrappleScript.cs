@@ -68,7 +68,7 @@ public class GrappleScript : MonoBehaviour
             damper = 7f;
             massScale = 4.5f;
         }
-        else if(pivot.name.Contains("PivotPointSwing"))
+        else if(pivot.name.Contains("PivotPointStretch"))
         {
             spring = 18f;
             damper = 0.3f;

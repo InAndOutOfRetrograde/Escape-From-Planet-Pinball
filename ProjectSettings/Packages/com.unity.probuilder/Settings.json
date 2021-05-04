@@ -152,6 +152,11 @@
                 "type": "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
                 "key": "WeldVertices.weldDistance",
                 "value": "{\"m_Value\":123.0}"
+            },
+            {
+                "type": "UnityEditor.StaticEditorFlags, UnityEditor.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+                "key": "mesh.defaultStaticEditorFlags",
+                "value": "{\"m_Value\":0}"
             }
         ]
     }

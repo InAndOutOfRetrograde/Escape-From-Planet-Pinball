@@ -12,6 +12,7 @@ public class BallMovementScript : MonoBehaviour
     float YMagnitude;
     Vector3 velocityToBe;
     Vector3 direction = new Vector3(0, 0, 0);
+    bool directionInput;
 
     //SPEED VARIABLES//
     //Change decrease in speed, top speed vert and hori here.
@@ -33,6 +34,8 @@ public class BallMovementScript : MonoBehaviour
     public float distanceWeight = 1;
 
     //METEOR MODE//
+    public Material fireMat;
+    public Material defaultMat;
     public GameObject bloom;
     public GameObject explosion;
     private ParticleSystem bloomObj;
@@ -74,11 +77,11 @@ public class BallMovementScript : MonoBehaviour
         movementCooldown = timerReset;
         cooldownVar = timerReset;
         
-        var realBloom = Instantiate(bloom, transform.position, transform.rotation);
-        bloomObj = realBloom.GetComponent<ParticleSystem>();
-        bloomObj.Stop();
+        /*GameObject realBloom = Instantiate(bloom, transform.position, transform.rotation);
         realBloom.transform.SetParent(gameObject.transform);
-        
+        bloomObj = realBloom.GetComponent<ParticleSystem>();
+        bloomObj.Clear();
+        bloomObj.Stop();*/
     }
 
     void Deacceleration()
@@ -112,6 +115,7 @@ public class BallMovementScript : MonoBehaviour
     //maybe y force down?
     void DirectionalInput()
     {
+        directionInput = false;
         if (Input.GetKey("up") || Input.GetKey(KeyCode.W))
         {
             direction += v3ForceUp;
@@ -123,6 +127,7 @@ public class BallMovementScript : MonoBehaviour
             {
                 velocityToBe.z += slopeForce.z;
             }
+            directionInput = true;
         }
         if (Input.GetKey("down") || Input.GetKey(KeyCode.S))
         {
@@ -134,6 +139,7 @@ public class BallMovementScript : MonoBehaviour
             {
                 velocityToBe.z -= slopeForce.z;
             }
+            directionInput = true;
         }
         if (Input.GetKey("left") || Input.GetKey(KeyCode.A))
         {
@@ -145,6 +151,7 @@ public class BallMovementScript : MonoBehaviour
             {
                 velocityToBe.x -= slopeForce.x;
             }
+            directionInput = true;
         }
         if (Input.GetKey("right") || Input.GetKey(KeyCode.D))
         {
@@ -156,6 +163,7 @@ public class BallMovementScript : MonoBehaviour
             {
                 velocityToBe.x += slopeForce.x;
             }
+            directionInput = true;
         }
 
         //adjusting direction based on slope
@@ -215,7 +223,7 @@ public class BallMovementScript : MonoBehaviour
         //fast
         if(meteorState == true)
         {
-            acceleration = 1.35f;
+            acceleration = 1.4f;
         }
         else
         {
@@ -234,6 +242,10 @@ public class BallMovementScript : MonoBehaviour
         }
         //slow down
         if (!Input.anyKey)
+        {
+            currentDeceleration += constantDeceleration;
+        }
+        else if(Input.GetKeyDown(KeyCode.E) && !directionInput)
         {
             currentDeceleration += constantDeceleration;
         }
@@ -345,12 +357,11 @@ public class BallMovementScript : MonoBehaviour
                 meteorState = false;
             }
         }
-        if (meteorState){
-            //timer starts for meteor state to play until timer runs out 
-        }
-        else
-        {bloomObj.Play();
-        }
+        //timer starts for meteor state to play until timer runs out 
+        if (meteorState == true){ //bloomObj.Play();
+            gameObject.transform.GetChild(1).GetComponent<Renderer>().material = fireMat; Debug.Log("bitches"); }
+        else{ //bloomObj.Stop(); 
+            gameObject.transform.GetChild(1).GetComponent<Renderer>().material = defaultMat;  Debug.Log("Not Bitchin"); }
     }
 
     void FixedUpdate()
